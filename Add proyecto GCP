@@ -1,0 +1,654 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>GCP en Problemas Financieros — Miguel Angel Benito Peñaloza</title>
+<style>
+:root{--primary:#1e3a8a;--primary-light:#3b82f6;--bg:#f8fafc;--card:#fff;--text:#1e293b;--muted:#64748b;--border:#e2e8f0;--success:#059669;--danger:#dc2626;--warning:#d97706}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Segoe UI',Tahoma,sans-serif;background:var(--bg);color:var(--text);line-height:1.6}
+header{background:linear-gradient(135deg,var(--primary),var(--primary-light));color:#fff;padding:2rem 1.5rem}
+header h1{font-size:1.7rem;margin-bottom:.4rem}
+header p{opacity:.95;font-size:.95rem;margin:.15rem 0}
+header strong{color:#fef3c7}
+nav{background:var(--card);border-bottom:1px solid var(--border);padding:0 .5rem;position:sticky;top:0;z-index:100;overflow-x:auto;white-space:nowrap;box-shadow:0 1px 3px rgba(0,0,0,.05)}
+nav a{display:inline-block;padding:.7rem .8rem;color:var(--muted);text-decoration:none;font-size:.85rem;font-weight:500}
+nav a:hover{color:var(--primary);background:#f1f5f9}
+main{max-width:1200px;margin:0 auto;padding:1.5rem}
+section{background:var(--card);border-radius:10px;padding:1.5rem;margin-bottom:1.5rem;box-shadow:0 1px 4px rgba(0,0,0,.06)}
+section h2{color:var(--primary);border-bottom:2px solid var(--border);padding-bottom:.5rem;margin-bottom:1rem;font-size:1.25rem}
+section h3{color:var(--primary);margin:1rem 0 .5rem;font-size:1.05rem}
+p{margin:.5rem 0}
+.matrix-grid{display:grid;gap:.4rem;margin:.5rem 0}
+.matrix-input,.vector-input{width:90px;padding:.4rem;border:1px solid var(--border);border-radius:5px;font-size:.9rem;text-align:center;font-family:monospace}
+.matrix-input:focus,.vector-input:focus{outline:none;border-color:var(--primary-light);box-shadow:0 0 0 2px rgba(59,130,246,.15)}
+button{padding:.6rem 1.1rem;border:none;border-radius:6px;cursor:pointer;font-weight:600;font-size:.9rem;transition:all .15s;font-family:inherit}
+button:active{transform:scale(.98)}
+.btn-primary{background:var(--primary);color:#fff}
+.btn-primary:hover{background:var(--primary-light)}
+.btn-secondary{background:var(--border);color:var(--text)}
+.btn-secondary:hover{background:#cbd5e1}
+.btn-scenario{background:var(--success);color:#fff}
+.btn-stress{background:var(--warning);color:#fff}
+.btn-bad{background:var(--danger);color:#fff}
+table{width:100%;border-collapse:collapse;margin:.5rem 0;font-size:.88rem}
+th,td{padding:.55rem;text-align:center;border-bottom:1px solid var(--border)}
+th{background:#f1f5f9;font-weight:600;color:var(--primary);font-size:.83rem}
+tr:hover td{background:#f8fafc}
+.result-box{background:#f1f5f9;padding:1rem;border-radius:6px;margin:.5rem 0}
+.result-box h4{color:var(--primary);margin-bottom:.5rem;font-size:.95rem}
+.badge{display:inline-block;padding:.15rem .55rem;border-radius:4px;font-size:.78rem;font-weight:600}
+.badge-ok{background:#d1fae5;color:var(--success)}
+.badge-fail{background:#fee2e2;color:var(--danger)}
+.form-group{margin-bottom:.7rem}
+.form-group label{display:block;font-weight:600;font-size:.82rem;margin-bottom:.25rem;color:var(--muted)}
+.form-group input,.form-group select{padding:.45rem;border:1px solid var(--border);border-radius:5px;font-size:.9rem;font-family:inherit;width:150px}
+.form-row{display:flex;flex-wrap:wrap;gap:1rem;align-items:flex-end;margin-bottom:1rem}
+.scenario-buttons{display:flex;gap:.7rem;flex-wrap:wrap;margin:1rem 0}
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:1.2rem}
+@media(max-width:768px){.grid-2{grid-template-columns:1fr}.matrix-input,.vector-input{width:60px}}
+.var-tag{display:inline-block;background:#dbeafe;color:var(--primary);padding:.1rem .5rem;border-radius:4px;font-weight:600;font-size:.85rem;margin-right:.3rem}
+.eq{background:#f8fafc;padding:.8rem 1rem;border-left:3px solid var(--primary-light);border-radius:4px;margin:.6rem 0;font-family:'Courier New',monospace;font-size:.88rem;overflow-x:auto;white-space:pre-wrap}
+.qa-table td{font-size:.83rem;text-align:left}
+.qa-table th{text-align:left}
+.alert{padding:.7rem 1rem;border-radius:6px;margin:.7rem 0;font-size:.88rem}
+.alert-error{background:#fee2e2;color:var(--danger);border-left:3px solid var(--danger)}
+.alert-success{background:#d1fae5;color:var(--success);border-left:3px solid var(--success)}
+.alert-info{background:#dbeafe;color:var(--primary);border-left:3px solid var(--primary)}
+.math{font-family:'Cambria Math','Times New Roman',serif;font-style:italic}
+footer{text-align:center;padding:1.5rem;color:var(--muted);font-size:.85rem;border-top:1px solid var(--border);margin-top:1rem}
+</style>
+</head>
+<body>
+<header>
+  <h1>Método de Gradientes Conjugados Precondicionado en Problemas Financieros</h1>
+  <p>Estudiante: <strong>Miguel Angel Benito Peñaloza</strong></p>
+  <p>Modalidad: Individual · Área: Finanzas · Mención: Ingeniería de Sistemas</p>
+  <p style="font-size:.85rem;opacity:.85;margin-top:.5rem">Sistema lineal Ax = b con n = 4 · Tolerancia 10⁻⁶ · Tres escenarios: Ideal, Bajo Estrés, Mal Condicionado</p>
+</header>
+
+<nav>
+  <a href="#inicio">1. Inicio</a>
+  <a href="#caso">2. Caso de Estudio</a>
+  <a href="#formulacion">3. Formulación</a>
+  <a href="#entrada">4. Entrada de Datos</a>
+  <a href="#escenarios">5. Escenarios</a>
+  <a href="#referencia">6. Solución de Referencia</a>
+  <a href="#comparacion">7. GCP vs GC</a>
+  <a href="#errores">8. Errores y Condicionamiento</a>
+  <a href="#qa">9. Pruebas QA</a>
+  <a href="#conclusiones">10. Conclusiones</a>
+</nav>
+
+<main>
+  <!-- 1. INICIO -->
+  <section id="inicio">
+    <h2>1. Inicio</h2>
+    <p>Bienvenido/a a la página interactiva del proyecto <strong>«Aplicación del Método de Gradientes Conjugados Precondicionado en problemas financieros»</strong>, desarrollado por <strong>Miguel Angel Benito Peñaloza</strong>.</p>
+    <p>El objetivo es modelar y resolver un problema financiero concreto mediante el <strong>Método de Gradientes Conjugados Precondicionado (GCP)</strong>, comparando su rendimiento frente a Gradientes Conjugados simple (GC), evaluando la precisión, el número de condición y la velocidad de convergencia en tres escenarios: <em>Ideal</em>, <em>Bajo Estrés Financiero</em> y <em>Mal Condicionado</em>.</p>
+    <div class="result-box">
+      <h4>Resumen del proyecto</h4>
+      <ul style="margin-left:1.2rem">
+        <li>Sistema lineal <span class="math">Ax = b</span> con <span class="math">n = 4</span> variables financieras.</li>
+        <li>Matriz <span class="math">A</span> simétrica y definida positiva (SPD) en los tres escenarios.</li>
+        <li>Método directo de referencia: <strong>Cholesky</strong>.</li>
+        <li>Método iterativo: <strong>GCP con precondicionador de Jacobi</strong>.</li>
+        <li>Contraste: <strong>Gradientes Conjugados simple</strong>.</li>
+        <li>Tolerancia: <span class="math">‖r<sub>k</sub>‖₂ / ‖b‖₂ &lt; 10⁻⁶</span>.</li>
+        <li>Análisis de errores por variable (absoluto, relativo, porcentual) y condicionamiento.</li>
+        <li>Módulo de pruebas de software (QA) integrado.</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- 2. CASO DE ESTUDIO -->
+  <section id="caso">
+    <h2>2. Caso de Estudio</h2>
+    <h3>Distribución presupuestaria entre 4 unidades de negocio con costos de transferencia internos</h3>
+    <p>Se considera una empresa con <strong>4 unidades de negocio</strong> que deben recibir una asignación presupuestaria. Cada unidad tiene un <strong>costo operativo propio</strong> por unidad de presupuesto asignado y mantiene <strong>costos de transferencia mutua</strong> con las demás unidades (por servicios internos, logística compartida, personal rotativo, etc.). El objetivo es determinar el presupuesto óptimo <span class="math">x<sub>i</sub></span> de cada unidad para satisfacer un <strong>flujo neto requerido</strong> <span class="math">b<sub>i</sub></span>.</p>
+    <div class="grid-2">
+      <div>
+        <h3>Variables del modelo</h3>
+        <p><span class="var-tag">x₁</span> Presupuesto (millones de Bs) para <strong>Producción</strong>.</p>
+        <p><span class="var-tag">x₂</span> Presupuesto (millones de Bs) para <strong>Comercialización</strong>.</p>
+        <p><span class="var-tag">x₃</span> Presupuesto (millones de Bs) para <strong>Logística</strong>.</p>
+        <p><span class="var-tag">x₄</span> Presupuesto (millones de Bs) para <strong>Administración</strong>.</p>
+      </div>
+      <div>
+        <h3>Justificación del modelo</h3>
+        <ul style="margin-left:1.2rem">
+          <li><strong>a<sub>ii</sub></strong>: costo operativo propio de la unidad <span class="math">i</span> por unidad de presupuesto.</li>
+          <li><strong>a<sub>ij</sub> (i ≠ j)</strong>: costo de transferencia mutua entre unidades <span class="math">i</span> y <span class="math">j</span>. Se cumple <span class="math">a<sub>ij</sub> = a<sub>ji</sub></span> por reciprocidad.</li>
+          <li><strong>b<sub>i</sub></strong>: flujo neto requerido por la unidad <span class="math">i</span>.</li>
+          <li>La dominancia diagonal garantiza que <span class="math">A</span> sea <strong>simétrica y definida positiva</strong>.</li>
+        </ul>
+      </div>
+    </div>
+    <div class="alert alert-info">
+      <strong>Nota:</strong> Los datos son conceptualmente justificados y representan escenarios realistas de planificación financiera empresarial. Los tres escenarios preservan la estructura del modelo, modificando únicamente coeficientes de <span class="math">A</span> y/o <span class="math">b</span>.
+    </div>
+  </section>
+
+  <!-- 3. FORMULACIÓN -->
+  <section id="formulacion">
+    <h2>3. Formulación Matemática</h2>
+    <p>El modelo conduce al sistema lineal <span class="math">Ax = b</span>:</p>
+    <div class="eq">A · x = b
+A ∈ ℝ⁴ˣ⁴  (simétrica y definida positiva)
+x = [x₁, x₂, x₃, x₄]ᵀ  (presupuestos a asignar)
+b = [b₁, b₂, b₃, b₄]ᵀ  (flujos netos requeridos)</div>
+    <h3>Interpretación de los coeficientes a<sub>ij</sub></h3>
+    <ul style="margin-left:1.2rem">
+      <li><strong>a<sub>ii</sub></strong> (diagonal): costo operativo propio de la unidad <span class="math">i</span>.</li>
+      <li><strong>a<sub>ij</sub></strong> (<span class="math">i ≠ j</span>): costo de transferencia entre unidades (simétrico).</li>
+      <li>La ecuación <span class="math">i</span>-ésima representa el balance neto de la unidad <span class="math">i</span>.</li>
+    </ul>
+    <h3>Verificación de simetría y definición positiva (SPD)</h3>
+    <ol style="margin-left:1.2rem">
+      <li><strong>Simetría:</strong> <span class="math">a<sub>ij</sub> = a<sub>ji</sub></span>.</li>
+      <li><strong>Definida positiva:</strong> todos los autovalores <span class="math">λ<sub>i</sub> &gt; 0</span>, o equivalentemente, menores principales de Sylvester: <span class="math">Δ₁, Δ₂, Δ₃, Δ₄ &gt; 0</span>.</li>
+    </ol>
+    <p>Los valores numéricos se muestran en la <a href="#referencia" style="color:var(--primary-light)">Sección 6</a> al ejecutar el análisis.</p>
+  </section>
+
+  <!-- 4. ENTRADA DE DATOS -->
+  <section id="entrada">
+    <h2>4. Entrada de Datos</h2>
+    <p>Edite los coeficientes de <span class="math">A</span>, el vector <span class="math">b</span>, el vector inicial <span class="math">x₀</span> y los parámetros. Luego presione <strong>Resolver</strong> o cargue un escenario desde la <a href="#escenarios" style="color:var(--primary-light)">Sección 5</a>.</p>
+    <h3>Matriz A (4 × 4) — debe ser simétrica y definida positiva</h3>
+    <div id="matA-grid" class="matrix-grid" style="grid-template-columns:repeat(4,auto)"></div>
+    <div class="grid-2" style="margin-top:1rem">
+      <div>
+        <h3>Vector b (4 × 1)</h3>
+        <div id="vecB-grid" class="matrix-grid" style="grid-template-columns:auto"></div>
+      </div>
+      <div>
+        <h3>Vector inicial x₀ (4 × 1)</h3>
+        <div id="vecX0-grid" class="matrix-grid" style="grid-template-columns:auto"></div>
+      </div>
+    </div>
+    <div class="form-row" style="margin-top:1rem">
+      <div class="form-group">
+        <label for="input-tol">Tolerancia (‖r‖/‖b‖)</label>
+        <input type="number" id="input-tol" value="1e-6" step="1e-9" min="1e-15">
+      </div>
+      <div class="form-group">
+        <label for="input-maxiter">Máx. iteraciones</label>
+        <input type="number" id="input-maxiter" value="1000" step="1" min="1">
+      </div>
+      <div class="form-group">
+        <label for="input-precond">Precondicionador</label>
+        <select id="input-precond"><option value="jacobi">Jacobi (diagonal)</option></select>
+      </div>
+    </div>
+    <div style="margin-top:.8rem;display:flex;gap:.7rem;flex-wrap:wrap">
+      <button class="btn-primary" onclick="runCurrent()">▶ Resolver con datos actuales</button>
+      <button class="btn-secondary" onclick="buildInputs();setStatus('Datos reiniciados.','info')">↺ Reiniciar</button>
+    </div>
+    <div id="status-msg"></div>
+  </section>
+
+  <!-- 5. ESCENARIOS -->
+  <section id="escenarios">
+    <h2>5. Tres Escenarios Obligatorios</h2>
+    <p>Presione un botón para <strong>cargar automáticamente</strong> los datos del escenario y ejecutar el análisis completo.</p>
+    <div class="scenario-buttons">
+      <button class="btn-scenario" onclick="loadAndRun('ideal')">① Escenario Ideal</button>
+      <button class="btn-stress" onclick="loadAndRun('stress')">② Escenario Bajo Estrés</button>
+      <button class="btn-bad" onclick="loadAndRun('bad')">③ Escenario Mal Condicionado</button>
+    </div>
+    <table>
+      <thead><tr><th>Escenario</th><th>Descripción financiera</th><th>Modificación matemática</th><th>Análisis esperado</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Ideal</strong></td><td>Economía estable, costos y transferencias equilibrados.</td><td>A con dominancia diagonal fuerte, κ(A) bajo.</td><td>Convergencia rápida; GCP y GC precisos.</td></tr>
+        <tr><td><strong>Bajo Estrés</strong></td><td>Inflación y aumento de costos: +20 % costos propios, +50 % transferencias, +30 % demanda.</td><td>A' = 1.2·diag(A) + 1.5·(A − diag(A)); b' = 1.3·b.</td><td>Condicionamiento similar; el punto de equilibrio se desplaza.</td></tr>
+        <tr><td><strong>Mal Condicionado</strong></td><td>Unidades con escalas operativas extremadamente dispares.</td><td>A con κ(A) ≈ 10⁵; fuerte mal escalamiento diagonal.</td><td>GC simple converge lentamente; GCP con Jacobi reduce κ y acelera.</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- 6. SOLUCIÓN DE REFERENCIA -->
+  <section id="referencia">
+    <h2>6. Solución de Referencia (Cholesky)</h2>
+    <p>Dado que <span class="math">A</span> es SPD, se usa la <strong>factorización de Cholesky</strong> <span class="math">A = LLᵀ</span>.</p>
+    <div id="reference-output" class="result-box">Sin resultados. Presione «Resolver» o cargue un escenario.</div>
+  </section>
+
+  <!-- 7. GCP vs GC -->
+  <section id="comparacion">
+    <h2>7. GCP vs GC — Comparación de Rendimiento</h2>
+    <div id="comparison-output" class="result-box">Sin resultados. Presione «Resolver» o cargue un escenario.</div>
+  </section>
+
+  <!-- 8. ERRORES -->
+  <section id="errores">
+    <h2>8. Análisis de Errores y Condicionamiento</h2>
+    <div id="errors-output" class="result-box">Sin resultados. Presione «Resolver» o cargue un escenario.</div>
+    <h3>Tabla comparativa de los tres escenarios</h3>
+    <div style="margin:.8rem 0"><button class="btn-primary" onclick="runComparative()">▶ Ejecutar comparación completa (3 escenarios)</button></div>
+    <div id="comparative-output" class="result-box">Sin resultados. Presione el botón para generar la tabla comparativa.</div>
+  </section>
+
+  <!-- 9. QA -->
+  <section id="qa">
+    <h2>9. Módulo de Pruebas (QA)</h2>
+    <p>Casos de prueba obligatorios. Presione <strong>Ejecutar pruebas</strong> para correrlos.</p>
+    <div style="margin:.8rem 0"><button class="btn-primary" onclick="runAllQA()">▶ Ejecutar pruebas</button></div>
+    <table class="qa-table" id="qa-table">
+      <thead><tr><th style="width:22%">Caso de prueba</th><th style="width:20%">Entrada</th><th style="width:20%">Resultado esperado</th><th style="width:22%">Resultado obtenido</th><th style="width:16%">Conclusión</th></tr></thead>
+      <tbody>
+        <tr><td><strong>QA-1</strong> Carga de escenarios</td><td>Ejecutar los 3 escenarios.</td><td>Los 3 se ejecutan sin errores con soluciones finitas.</td><td id="qa1-result">—</td><td id="qa1-concl">—</td></tr>
+        <tr><td><strong>QA-2</strong> Matriz no válida</td><td>Matriz no simétrica o no definida positiva.</td><td>El sistema detecta el error y notifica sin colapsar.</td><td id="qa2-result">—</td><td id="qa2-concl">—</td></tr>
+        <tr><td><strong>QA-3</strong> Edición dinámica</td><td>Modificar a₁₁ y recalcular.</td><td>La solución de referencia cambia.</td><td id="qa3-result">—</td><td id="qa3-concl">—</td></tr>
+        <tr><td><strong>QA-4</strong> Precondicionamiento</td><td>Escenario Mal Condicionado con Jacobi.</td><td>Iteraciones GCP ≤ iteraciones GC.</td><td id="qa4-result">—</td><td id="qa4-concl">—</td></tr>
+      </tbody>
+    </table>
+    <div id="qa-log" style="font-size:.85rem;color:var(--muted);margin-top:.5rem"></div>
+  </section>
+
+  <!-- 10. CONCLUSIONES -->
+  <section id="conclusiones">
+    <h2>10. Conclusiones y Referencias</h2>
+    <h3>Interpretación técnica</h3>
+    <ul style="margin-left:1.2rem">
+      <li>El <strong>GCP</strong> resuelve eficientemente sistemas SPD con convergencia en a lo sumo <span class="math">n</span> iteraciones en aritmética exacta.</li>
+      <li>El <strong>precondicionador de Jacobi</strong> es efectivo cuando el mal condicionamiento proviene de mal escalamiento diagonal, reduciendo drásticamente <span class="math">κ(M⁻¹A)</span>.</li>
+      <li>En el escenario <strong>Ideal</strong>, GC y GCP convergen rápidamente.</li>
+      <li>En el escenario <strong>Bajo Estrés</strong>, el condicionamiento se mantiene; el equilibrio se desplaza.</li>
+    </ul>
+    <h3>Interpretación financiera</h3>
+    <ul style="margin-left:1.2rem">
+      <li>El vector <span class="math">x</span> representa la asignación presupuestaria óptima por unidad.</li>
+      <li>Las variaciones entre escenarios permiten evaluar la <strong>sensibilidad del presupuesto</strong>.</li>
+      <li>El escenario Mal Condicionado muestra la necesidad de precondicionamiento cuando hay unidades de escalas muy dispares.</li>
+    </ul>
+    <h3>Referencias</h3>
+    <ul style="margin-left:1.2rem;font-size:.9rem">
+      <li>Suñagua S., P. (2020). <em>Método de Gradientes Conjugados Precondicionado</em>. Revista Boliviana de Matemática – UMSA, 04, 2–7.</li>
+      <li>Golub, G. H., & Van Loan, C. F. (2013). <em>Matrix Computations</em> (4th ed.). Johns Hopkins University Press.</li>
+      <li>Saad, Y. (2003). <em>Iterative Methods for Sparse Linear Systems</em> (2nd ed.). SIAM.</li>
+    </ul>
+  </section>
+</main>
+
+<footer>Proyecto académico · Método de Gradientes Conjugados Precondicionado en Finanzas · Miguel Angel Benito Peñaloza</footer>
+
+<script>
+const N = 4;
+
+const scenarios = {
+  ideal: {
+    label: 'Ideal',
+    A: [[10,2,1,1],[2,12,2,1],[1,2,14,2],[1,1,2,16]],
+    b: [1000,1200,1400,1600]
+  },
+  stress: {
+    label: 'Bajo Estrés',
+    A: [[12,3,1.5,1.5],[3,14.4,3,1.5],[1.5,3,16.8,3],[1.5,1.5,3,19.2]],
+    b: [1300,1560,1820,2080]
+  },
+  bad: {
+    label: 'Mal Condicionado',
+    A: [[1e6,1,1,1],[1,1e3,1,1],[1,1,1e2,1],[1,1,1,10]],
+    b: [10000090,20080,3070,460]
+  }
+};
+
+function matVec(A,x){return A.map(row=>row.reduce((s,a,j)=>s+a*x[j],0));}
+function sub(a,b){return a.map((v,i)=>v-b[i]);}
+function dot(a,b){return a.reduce((s,v,i)=>s+v*b[i],0);}
+function norm2(a){return Math.sqrt(dot(a,a));}
+function fmt(v,d){d=d===undefined?6:d;if(v==null||Number.isNaN(v))return'—';if(!isFinite(v))return v>0?'∞':'−∞';if(v===0)return'0';const av=Math.abs(v);if(av>=1e6||av<1e-4)return v.toExponential(d-1);return v.toFixed(d);}
+function transpose(A){return A[0].map((_,j)=>A.map(r=>r[j]));}
+
+function cholesky(A){
+  const n=A.length,L=Array.from({length:n},()=>new Array(n).fill(0));
+  for(let i=0;i<n;i++)for(let j=0;j<=i;j++){
+    let s=0;for(let k=0;k<j;k++)s+=L[i][k]*L[j][k];
+    if(i===j){const v=A[i][i]-s;if(v<=0)throw new Error(`Cholesky falla: no definida positiva en (${i+1},${i+1})`);L[i][j]=Math.sqrt(v);}
+    else{if(L[j][j]===0)throw new Error('Cholesky falla: pivote nulo');L[i][j]=(A[i][j]-s)/L[j][j];}
+  }
+  return L;
+}
+function solveWithL(L,b){
+  const n=L.length,y=new Array(n).fill(0);
+  for(let i=0;i<n;i++){let s=0;for(let j=0;j<i;j++)s+=L[i][j]*y[j];y[i]=(b[i]-s)/L[i][i];}
+  const Lt=transpose(L),x=new Array(n).fill(0);
+  for(let i=n-1;i>=0;i--){let s=0;for(let j=i+1;j<n;j++)s+=Lt[i][j]*x[j];x[i]=(y[i]-s)/Lt[i][i];}
+  return x;
+}
+function referenceSolve(A,b){return solveWithL(cholesky(A),b);}
+
+function eigenvaluesSymmetric(A){
+  const n=A.length,a=A.map(r=>[...r]);
+  for(let sweep=0;sweep<100;sweep++){
+    let off=0;for(let i=0;i<n;i++)for(let j=i+1;j<n;j++)off+=a[i][j]*a[i][j];
+    if(off<1e-30)break;
+    for(let p=0;p<n-1;p++)for(let q=p+1;q<n;q++){
+      if(Math.abs(a[p][q])<1e-15)continue;
+      const tau=(a[q][q]-a[p][p])/(2*a[p][q]);
+      const t=(tau>=0)?1/(tau+Math.sqrt(1+tau*tau)):-1/(-tau+Math.sqrt(1+tau*tau));
+      const c=1/Math.sqrt(1+t*t),s=t*c;
+      for(let i=0;i<n;i++){const aip=a[i][p],aiq=a[i][q];a[i][p]=c*aip-s*aiq;a[i][q]=s*aip+c*aiq;}
+      for(let i=0;i<n;i++){const api=a[p][i],aqi=a[q][i];a[p][i]=c*api-s*aqi;a[q][i]=s*api+c*aqi;}
+    }
+  }
+  return a.map((row,i)=>row[i]);
+}
+function conditionNumber(A){
+  const eigs=eigenvaluesSymmetric(A).map(Math.abs);
+  const lmax=Math.max(...eigs),lmin=Math.min(...eigs);
+  return lmin===0?Infinity:lmax/lmin;
+}
+function det(A){
+  const n=A.length;if(n===1)return A[0][0];if(n===2)return A[0][0]*A[1][1]-A[0][1]*A[1][0];
+  const M=A.map(r=>[...r]);let d=1;
+  for(let i=0;i<n;i++){let mr=i;for(let r=i+1;r<n;r++)if(Math.abs(M[r][i])>Math.abs(M[mr][i]))mr=r;
+    if(Math.abs(M[mr][i])<1e-15)return 0;
+    if(mr!==i){[M[i],M[mr]]=[M[mr],M[i]];d=-d;}
+    d*=M[i][i];
+    for(let r=i+1;r<n;r++){const f=M[r][i]/M[i][i];for(let c=i;c<n;c++)M[r][c]-=f*M[i][c];}}
+  return d;
+}
+function leadingPrincipalMinors(A){
+  const mins=[];
+  for(let k=1;k<=A.length;k++)mins.push(det(A.slice(0,k).map(r=>r.slice(0,k))));
+  return mins;
+}
+
+function validateSPD(A){
+  const errs=[],n=A.length;
+  for(let i=0;i<n;i++){
+    if(A[i].length!==n){errs.push('La matriz no es cuadrada.');return errs;}
+    for(let j=0;j<n;j++)if(!isFinite(A[i][j])){errs.push(`a[${i+1}][${j+1}] no es finito.`);return errs;}
+  }
+  for(let i=0;i<n;i++)for(let j=i+1;j<n;j++){
+    const tol=1e-9*Math.max(1,Math.abs(A[i][j]),Math.abs(A[j][i]));
+    if(Math.abs(A[i][j]-A[j][i])>tol)errs.push(`Matriz no simétrica: a[${i+1}][${j+1}] ≠ a[${j+1}][${i+1}].`);
+  }
+  if(errs.length)return errs;
+  try{cholesky(A);}catch(e){errs.push('Matriz no definida positiva: '+e.message);}
+  return errs;
+}
+
+function cgSimple(A,b,x0,tol,maxIter){
+  const bNorm=norm2(b);
+  if(bNorm===0)return{x:[...x0],iter:0,history:[0],residual:0,converged:true};
+  let x=[...x0],r=sub(b,matVec(A,x)),p=[...r],rsold=dot(r,r);
+  const history=[Math.sqrt(rsold)/bNorm];let iter=0;
+  while(Math.sqrt(rsold)/bNorm>=tol&&iter<maxIter){
+    iter++;
+    const Ap=matVec(A,p),alpha=rsold/dot(p,Ap);
+    x=x.map((v,i)=>v+alpha*p[i]);
+    r=r.map((v,i)=>v-alpha*Ap[i]);
+    const rsnew=dot(r,r);history.push(Math.sqrt(rsnew)/bNorm);
+    if(Math.sqrt(rsnew)/bNorm<tol){rsold=rsnew;break;}
+    const beta=rsnew/rsold;p=r.map((v,i)=>v+beta*p[i]);rsold=rsnew;
+  }
+  return{x,iter,history,residual:Math.sqrt(rsold)/bNorm,converged:Math.sqrt(rsold)/bNorm<tol};
+}
+
+function pcgJacobi(A,b,x0,tol,maxIter){
+  const n=A.length,M=A.map((row,i)=>row[i]);
+  if(M.some(m=>!isFinite(m)||m<=0))throw new Error('Jacobi no aplicable: diagonal no positiva.');
+  const bNorm=norm2(b);
+  if(bNorm===0)return{x:[...x0],iter:0,history:[0],residual:0,converged:true};
+  let x=[...x0],r=sub(b,matVec(A,x));
+  let z=r.map((v,i)=>v/M[i]),p=[...z],rzold=dot(r,z);
+  const history=[norm2(r)/bNorm];let iter=0;
+  while(norm2(r)/bNorm>=tol&&iter<maxIter){
+    iter++;
+    const Ap=matVec(A,p),alpha=rzold/dot(p,Ap);
+    x=x.map((v,i)=>v+alpha*p[i]);
+    r=r.map((v,i)=>v-alpha*Ap[i]);
+    const rNorm=norm2(r)/bNorm;history.push(rNorm);
+    if(rNorm<tol)break;
+    z=r.map((v,i)=>v/M[i]);
+    const rznew=dot(r,z),beta=rznew/rzold;
+    p=z.map((v,i)=>v+beta*p[i]);rzold=rznew;
+  }
+  const finalRes=norm2(r)/bNorm;
+  return{x,iter,history,residual:finalRes,converged:finalRes<tol};
+}
+
+function analyze(A,b,x0,tol,maxIter){
+  const spdErrs=validateSPD(A);
+  if(spdErrs.length){const err=new Error(spdErrs.join(' '));err.spdErrors=spdErrs;throw err;}
+  const xRef=referenceSolve(A,b);
+  const cg=cgSimple(A,b,x0,tol,maxIter);
+  const pcg=pcgJacobi(A,b,x0,tol,maxIter);
+  const kappaA=conditionNumber(A);
+  const M=A.map((row,i)=>row[i]),Ms=M.map(Math.sqrt);
+  const B=A.map((row,i)=>row.map((v,j)=>v/(Ms[i]*Ms[j])));
+  const kappaB=conditionNumber(B);
+  const eigs=eigenvaluesSymmetric(A);
+  const minors=leadingPrincipalMinors(A);
+  const errors=xRef.map((xr,i)=>{
+    const Ea=Math.abs(xr-pcg.x[i]);
+    const Er=xr!==0?Ea/Math.abs(xr):NaN;
+    const Ep=Er*100;
+    return{i:i+1,xRef:xr,xGCP:pcg.x[i],Ea,Er,Ep};
+  });
+  const residualGCP=norm2(sub(b,matVec(A,pcg.x)))/norm2(b);
+  const residualGC=norm2(sub(b,matVec(A,cg.x)))/norm2(b);
+  return{xRef,cg,pcg,kappaA,kappaB,errors,residualGCP,residualGC,eigs,minors};
+}
+
+function buildInputs(){
+  ['matA-grid','vecB-grid','vecX0-grid'].forEach(id=>document.getElementById(id).innerHTML='');
+  const matGrid=document.getElementById('matA-grid');
+  for(let i=0;i<N;i++)for(let j=0;j<N;j++){
+    const inp=document.createElement('input');
+    inp.type='number';inp.step='any';inp.className='matrix-input';
+    inp.id=`A-${i}-${j}`;inp.value=0;matGrid.appendChild(inp);
+  }
+  const bGrid=document.getElementById('vecB-grid');
+  for(let i=0;i<N;i++){const inp=document.createElement('input');inp.type='number';inp.step='any';inp.className='vector-input';inp.id=`b-${i}`;inp.value=0;bGrid.appendChild(inp);}
+  const x0Grid=document.getElementById('vecX0-grid');
+  for(let i=0;i<N;i++){const inp=document.createElement('input');inp.type='number';inp.step='any';inp.className='vector-input';inp.id=`x0-${i}`;inp.value=0;x0Grid.appendChild(inp);}
+}
+
+function setInputsFromData(A,b,x0){
+  for(let i=0;i<N;i++){
+    for(let j=0;j<N;j++)document.getElementById(`A-${i}-${j}`).value=A[i][j];
+    document.getElementById(`b-${i}`).value=b[i];
+    document.getElementById(`x0-${i}`).value=x0?x0[i]:0;
+  }
+}
+
+function readInputs(){
+  const A=[],b=[],x0=[];
+  for(let i=0;i<N;i++){
+    const row=[];
+    for(let j=0;j<N;j++){const v=parseFloat(document.getElementById(`A-${i}-${j}`).value);row.push(isFinite(v)?v:0);}
+    A.push(row);
+    const bi=parseFloat(document.getElementById(`b-${i}`).value);b.push(isFinite(bi)?bi:0);
+    const x0i=parseFloat(document.getElementById(`x0-${i}`).value);x0.push(isFinite(x0i)?x0i:0);
+  }
+  const tol=parseFloat(document.getElementById('input-tol').value)||1e-6;
+  const maxIter=parseInt(document.getElementById('input-maxiter').value)||1000;
+  return{A,b,x0,tol,maxIter};
+}
+
+function renderMatrixHTML(A,title){
+  let html=`<div style="margin:.5rem 0"><strong>${title}</strong><table style="display:inline-block;margin-left:.5rem;border-collapse:collapse">`;
+  for(let i=0;i<A.length;i++){html+='<tr>';for(let j=0;j<A[i].length;j++)html+=`<td style="border:none;padding:.2rem .6rem;font-family:monospace;text-align:right">${fmt(A[i][j],4)}</td>`;html+='</tr>';}
+  return html+'</table></div>';
+}
+function renderVectorHTML(v,title){return `<div style="margin:.5rem 0"><strong>${title}</strong> [ ${v.map(x=>fmt(x,4)).join('  ·  ')} ]ᵀ</div>`;}
+
+function renderReference(A,b,result){
+  const el=document.getElementById('reference-output');
+  if(!result){el.innerHTML='Sin resultados. Presione «Resolver» o cargue un escenario.';return;}
+  let html=renderMatrixHTML(A,'Matriz A:');
+  html+=renderVectorHTML(b,'Vector b:');
+  html+=renderVectorHTML(result.xRef,'Solución de referencia x_ref (Cholesky):');
+  html+='<h4 style="margin-top:1rem">Verificación SPD</h4>';
+  html+='<p><strong>Simetría:</strong> <span class="badge badge-ok">A = Aᵀ ✓</span></p>';
+  html+='<table><thead><tr><th>Autovalor</th><th>Valor</th></tr></thead><tbody>';
+  result.eigs.forEach((lam,i)=>html+=`<tr><td>λ${i+1}</td><td>${fmt(lam)}</td></tr>`);
+  html+='</tbody></table><p><strong>Menores principales conductores (Sylvester):</strong></p>';
+  html+='<table><thead><tr><th>Δ₁</th><th>Δ₂</th><th>Δ₃</th><th>Δ₄</th></tr></thead><tbody><tr>';
+  result.minors.forEach(m=>html+=`<td>${fmt(m)} ${m>0?'✓':'✗'}</td>`);
+  html+='</tr></tbody></table>';
+  const allPos=result.eigs.every(l=>l>0)&&result.minors.every(m=>m>0);
+  html+=allPos?'<p><span class="badge badge-ok">Matriz SPD confirmada</span></p>':'<p><span class="badge badge-fail">La matriz NO es SPD</span></p>';
+  el.innerHTML=html;
+}
+
+function renderComparison(result){
+  const el=document.getElementById('comparison-output');
+  if(!result){el.innerHTML='Sin resultados.';return;}
+  const{cg,pcg,kappaA,kappaB}=result;
+  let html='<div class="grid-2">';
+  html+='<div class="result-box"><h4>Gradientes Conjugados simple (GC)</h4>';
+  html+=`<p>Iteraciones: <strong>${cg.iter}</strong></p>`;
+  html+=`<p>Residuo relativo final: <strong>${fmt(cg.residual,4)}</strong></p>`;
+  html+=`<p>¿Convergió? ${cg.converged?'<span class="badge badge-ok">Sí</span>':'<span class="badge badge-fail">No</span>'}</p>`;
+  html+=`<p>Solución: [ ${cg.x.map(v=>fmt(v,4)).join(' · ')} ]</p></div>`;
+  html+='<div class="result-box"><h4>GCP con Jacobi</h4>';
+  html+=`<p>Iteraciones: <strong>${pcg.iter}</strong></p>`;
+  html+=`<p>Residuo relativo final: <strong>${fmt(pcg.residual,4)}</strong></p>`;
+  html+=`<p>¿Convergió? ${pcg.converged?'<span class="badge badge-ok">Sí</span>':'<span class="badge badge-fail">No</span>'}</p>`;
+  html+=`<p>Solución: [ ${pcg.x.map(v=>fmt(v,4)).join(' · ')} ]</p></div></div>`;
+  html+='<div class="result-box">';
+  html+=`<p><strong>κ(A):</strong> ${fmt(kappaA,4)}</p>`;
+  html+=`<p><strong>κ(M⁻¹A):</strong> ${fmt(kappaB,4)}</p>`;
+  html+=`<p><strong>Ganancia:</strong> ${pcg.iter<cg.iter?`GCP es ${cg.iter-pcg.iter} iteraciones más rápido (${(100*(1-pcg.iter/Math.max(1,cg.iter))).toFixed(1)} % de reducción).`:(pcg.iter===cg.iter?'Ambos requieren el mismo número de iteraciones.':'El precondicionador no aportó mejora en este caso.')}</p>`;
+  html+='</div>';
+  el.innerHTML=html;
+}
+
+function renderErrors(result){
+  const el=document.getElementById('errors-output');
+  if(!result){el.innerHTML='Sin resultados.';return;}
+  let html='<h4>Errores por variable (GCP vs solución de referencia)</h4>';
+  html+='<table><thead><tr><th>Variable</th><th>x_ref</th><th>x_GCP</th><th>Ea</th><th>Er</th><th>Ep</th></tr></thead><tbody>';
+  result.errors.forEach(e=>{
+    html+=`<tr><td>x${e.i}</td><td>${fmt(e.xRef,6)}</td><td>${fmt(e.xGCP,6)}</td><td>${fmt(e.Ea,6)}</td><td>${Number.isNaN(e.Er)?'No definido':fmt(e.Er,6)}</td><td>${Number.isNaN(e.Ep)?'—':fmt(e.Ep,4)+' %'}</td></tr>`;
+  });
+  html+='</tbody></table>';
+  html+='<div class="result-box">';
+  html+=`<p><strong>Residuo relativo global (GCP):</strong> ‖b − A·x_GCP‖₂ / ‖b‖₂ = ${fmt(result.residualGCP,6)}</p>`;
+  html+=`<p><strong>Residuo relativo global (GC):</strong> ‖b − A·x_GC‖₂ / ‖b‖₂ = ${fmt(result.residualGC,6)}</p>`;
+  html+=`<p><strong>Número de condición original κ(A):</strong> ${fmt(result.kappaA,6)}</p>`;
+  html+=`<p><strong>Número de condición precondicionado κ(M⁻¹A):</strong> ${fmt(result.kappaB,6)}</p>`;
+  html+='</div>';
+  el.innerHTML=html;
+}
+
+function setStatus(msg,type){
+  const el=document.getElementById('status-msg');
+  el.className=msg?'alert alert-'+(type||'info'):'';
+  el.innerHTML=msg;
+}
+
+function runCurrent(){
+  const{A,b,x0,tol,maxIter}=readInputs();
+  setStatus('','');
+  try{
+    const result=analyze(A,b,x0,tol,maxIter);
+    renderReference(A,b,result);
+    renderComparison(result);
+    renderErrors(result);
+    setStatus('✓ Análisis ejecutado correctamente.','success');
+    document.getElementById('referencia').scrollIntoView({behavior:'smooth'});
+  }catch(e){
+    setStatus('<strong>Error:</strong> '+e.message,'error');
+    document.getElementById('reference-output').innerHTML='<span class="badge badge-fail">Sin solución — matriz inválida</span> '+e.message;
+    document.getElementById('comparison-output').innerHTML='—';
+    document.getElementById('errors-output').innerHTML='—';
+  }
+}
+
+function loadAndRun(id){
+  const s=scenarios[id];
+  setInputsFromData(s.A,s.b,[0,0,0,0]);
+  runCurrent();
+}
+
+function runComparative(){
+  const el=document.getElementById('comparative-output');
+  const rows=[];
+  try{
+    for(const id of ['ideal','stress','bad']){
+      const s=scenarios[id];
+      rows.push({label:s.label,r:analyze(s.A,s.b,[0,0,0,0],1e-6,5000)});
+    }
+  }catch(e){el.innerHTML='<span class="badge badge-fail">Error:</span> '+e.message;return;}
+  const fmtVec=v=>'['+v.map(x=>fmt(x,3)).join(', ')+']';
+  let html='<table><thead><tr><th>Indicador</th>';
+  rows.forEach(row=>html+=`<th>${row.label}</th>`);
+  html+='</tr></thead><tbody>';
+  const addRow=(label,fn)=>{html+=`<tr><td style="text-align:left"><strong>${label}</strong></td>`;rows.forEach(row=>html+=`<td>${fn(row.r)}</td>`);html+='</tr>';};
+  addRow('Solución de referencia',r=>fmtVec(r.xRef));
+  addRow('Solución GCP',r=>fmtVec(r.pcg.x));
+  addRow('Error absoluto (por variable)',r=>fmtVec(r.errors.map(e=>e.Ea)));
+  addRow('Error porcentual (por variable)',r=>fmtVec(r.errors.map(e=>e.Ep)));
+  addRow('Iteraciones GC',r=>r.cg.iter);
+  addRow('Iteraciones GCP',r=>r.pcg.iter);
+  addRow('κ(A)',r=>fmt(r.kappaA,4));
+  addRow('κ(M⁻¹A)',r=>fmt(r.kappaB,4));
+  addRow('Residuo relativo final GCP',r=>fmt(r.residualGCP,4));
+  addRow('¿Convergió GCP?',r=>r.pcg.converged?'<span class="badge badge-ok">Sí</span>':'<span class="badge badge-fail">No</span>');
+  addRow('Interpretación financiera',r=>{
+    if(r.kappaA<10)return'Estable: convergencia rápida y errores despreciables.';
+    if(r.kappaA<1e4)return'Costos desplazados: punto de equilibrio cambia, condicionamiento estable.';
+    return'Escalas muy dispares: requiere precondicionamiento para converger.';
+  });
+  html+='</tbody></table>';
+  el.innerHTML=html;
+}
+
+function runTest1(){
+  const logs=[];let ok=true;
+  for(const id of ['ideal','stress','bad']){
+    const s=scenarios[id];
+    try{
+      const r=analyze(s.A,s.b,[0,0,0,0],1e-6,5000);
+      const finite=r.xRef.every(Number.isFinite)&&r.pcg.x.every(Number.isFinite);
+      if(!finite){ok=false;logs.push(`${s.label}: solución no finita`);}
+      else logs.push(`${s.label}: OK (GC=${r.cg.iter}, GCP=${r.pcg.iter})`);
+    }catch(e){ok=false;logs.push(`${s.label}: FALLÓ (${e.message})`);}
+  }
+  return{passed:ok,log:logs.join(' · ')};
+}
+function runTest2(){
+  const bad=[[4,1,1,1],[2,4,1,1],[1,1,4,1],[1,1,1,4]];
+  const errs=validateSPD(bad);
+  return errs.length>0?{passed:true,log:'Error detectado: '+errs[0]}:{passed:false,log:'No se detectó el error.'};
+}
+function runTest3(){
+  const s=scenarios.ideal;
+  const r1=analyze(s.A,s.b,[0,0,0,0],1e-6,5000);
+  const A2=s.A.map(r=>[...r]);A2[0][0]+=5;
+  const r2=analyze(A2,s.b,[0,0,0,0],1e-6,5000);
+  const changed=Math.abs(r1.xRef[0]-r2.xRef[0])>1e-9;
+  return{passed:changed,log:`x_ref[1]: ${fmt(r1.xRef[0],4)} → ${fmt(r2.xRef[0],4)}`};
+}
+function runTest4(){
+  const s=scenarios.bad;
+  const r=analyze(s.A,s.b,[0,0,0,0],1e-6,5000);
+  return{passed:r.pcg.iter<=r.cg.iter,log:`GC=${r.cg.iter} iter · GCP=${r.pcg.iter} iter · κ(A)=${fmt(r.kappaA,2)} · κ(M⁻¹A)=${fmt(r.kappaB,2)}`};
+}
+function fillQA(id,res){
+  document.getElementById(`qa${id}-result`).innerHTML=`<span class="badge badge-${res.passed?'ok':'fail'}">${res.passed?'OK':'FALLÓ'}</span><br><small>${res.log}</small>`;
+  document.getElementById(`qa${id}-concl`).innerHTML=`<span class="badge badge-${res.passed?'ok':'fail'}">${res.passed?'Aprobado':'Rechazado'}</span>`;
+}
+function runAllQA(){
+  const log=[];
+  const t1=runTest1();fillQA(1,t1);log.push('QA-1: '+(t1.passed?'✓':'✗'));
+  const t2=runTest2();fillQA(2,t2);log.push('QA-2: '+(t2.passed?'✓':'✗'));
+  const t3=runTest3();fillQA(3,t3);log.push('QA-3: '+(t3.passed?'✓':'✗'));
+  const t4=runTest4();fillQA(4,t4);log.push('QA-4: '+(t4.passed?'✓':'✗'));
+  document.getElementById('qa-log').textContent='Resumen: '+log.join(' · ');
+}
+
+window.addEventListener('DOMContentLoaded',()=>{
+  buildInputs();
+  loadAndRun('ideal');
+});
+</script>
+</body>
+</html>
